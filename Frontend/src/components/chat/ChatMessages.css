@@ -33,6 +33,13 @@
     font-weight: 600;
 }
 
+/* Timestamp/meta */
+.msg-meta {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    margin-top: 4px;
+}
+
 /* Bubble styling refined */
 .msg-bubble {
     padding: var(--space-4) var(--space-5);

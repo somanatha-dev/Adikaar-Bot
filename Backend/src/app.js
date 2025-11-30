@@ -29,7 +29,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 
 
-app.get("*name", (req, res) => {
+app.get("*name", (req, res) => {    // wildcard route to handle all other routes which are not defined or created in backend
     res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 

@@ -5,9 +5,13 @@ import ChatSidebar from '../components/chat/ChatSidebar.jsx';
 import ChatMessages from '../components/chat/ChatMessages.jsx';
 import ChatComposer from '../components/chat/ChatComposer.jsx';
 import '../components/chat/ChatLayout.css';
+import AccountPanel from '../components/account/AccountPanel.jsx';
+import NewChatPanel from '../components/chat/NewChatPanel.jsx';
+import RenameChatPanel from '../components/chat/RenameChatPanel.jsx';
+import DeleteChatConfirm from '../components/chat/DeleteChatConfirm.jsx';
 import { fakeAIReply } from '../components/chat/aiClient.js';
 import { useDispatch, useSelector } from 'react-redux';
-import axios from 'axios';
+import { http, SOCKET_URL } from '../lib/http.js';
 import {
   ensureInitialChat,
   startNewChat,
@@ -17,7 +21,9 @@ import {
   sendingFinished,
   addUserMessage,
   addAIMessage,
-  setChats
+  setChats,
+  updateChatTitle,
+  removeChat
 } from '../store/chatSlice.js';
 
 const Home = () => {
@@ -28,6 +34,14 @@ const Home = () => {
   const isSending = useSelector(state => state.chat.isSending);
   const [ sidebarOpen, setSidebarOpen ] = React.useState(false);
   const [ socket, setSocket ] = useState(null);
+  const [ showAccount, setShowAccount ] = useState(false);
+  const [ showNewChat, setShowNewChat ] = useState(false);
+  const [ showRename, setShowRename ] = useState(false);
+  const [ renameChatId, setRenameChatId ] = useState(null);
+  const [ renameInitialTitle, setRenameInitialTitle ] = useState('');
+  const [ showDelete, setShowDelete ] = useState(false);
+  const [ deleteChatId, setDeleteChatId ] = useState(null);
+  const [ deleteChatTitle, setDeleteChatTitle ] = useState('');
 
   const activeChat = chats.find(c => c.id === activeChatId) || null;
 
@@ -42,31 +56,38 @@ const Home = () => {
     // }
   ]);
 
-  const handleNewChat = async () => {
-    // Prompt user for title of new chat, fallback to 'New Chat'
-    let title = window.prompt('Enter a title for the new chat:', '');
-    if (title) title = title.trim();
-    if (!title) return
+  const handleNewChat = () => setShowNewChat(true);
 
-    const response = await axios.post("https://cohort-1-project-chat-gpt-lvp3.onrender.com/api/chat", {
-      title
-    }, {
-      withCredentials: true
-    })
-    getMessages(response.data.chat._id);
+  const handleRenameChat = (id, currentTitle) => {
+    setRenameChatId(id);
+    setRenameInitialTitle(currentTitle || '');
+    setShowRename(true);
+  };
+
+  const handleDeleteChat = (id) => {
+    const chat = chats.find(c => c._id === id);
+    setDeleteChatId(id);
+    setDeleteChatTitle(chat?.title || 'this chat');
+    setShowDelete(true);
+  };
+
+  const createNewChat = async (title) => {
+    const response = await http.post('/api/chat', { title });
     dispatch(startNewChat(response.data.chat));
     setSidebarOpen(false);
-  }
+    setShowNewChat(false);
+    await getMessages(response.data.chat._id);
+  };
 
   // Ensure at least one chat exists initially
   useEffect(() => {
 
-    axios.get("https://cohort-1-project-chat-gpt-lvp3.onrender.com/api/chat", { withCredentials: true })
+    http.get("/api/chat")
       .then(response => {
         dispatch(setChats(response.data.chats.reverse()));
       })
 
-    const tempSocket = io("https://cohort-1-project-chat-gpt-lvp3.onrender.com", {
+    const tempSocket = io(SOCKET_URL, {
       withCredentials: true,
     })
 
@@ -75,7 +96,8 @@ const Home = () => {
 
       setMessages((prevMessages) => [ ...prevMessages, {
         type: 'ai',
-        content: messagePayload.content
+        content: messagePayload.content,
+        createdAt: new Date()
       } ]);
 
       dispatch(sendingFinished());
@@ -84,6 +106,15 @@ const Home = () => {
     setSocket(tempSocket);
 
   }, []);
+
+  // Load messages whenever active chat changes programmatically
+  useEffect(() => {
+    if (activeChatId) {
+      getMessages(activeChatId);
+    } else {
+      setMessages([]);
+    }
+  }, [activeChatId]);
 
   const sendMessage = async () => {
 
@@ -94,7 +125,8 @@ const Home = () => {
 
     const newMessages = [ ...messages, {
       type: 'user',
-      content: trimmed
+      content: trimmed,
+      createdAt: new Date()
     } ];
 
     console.log("New messages:", newMessages);
@@ -119,16 +151,42 @@ const Home = () => {
 
   const getMessages = async (chatId) => {
 
-   const response = await  axios.get(`https://cohort-1-project-chat-gpt-lvp3.onrender.com/api/chat/messages/${chatId}`, { withCredentials: true })
+  const response = await  http.get(`/api/chat/messages/${chatId}`)
 
    console.log("Fetched messages:", response.data.messages);
 
    setMessages(response.data.messages.map(m => ({
      type: m.role === 'user' ? 'user' : 'ai',
-     content: m.content
+     content: m.content,
+     createdAt: m.createdAt
    })));
 
   }
+
+  const renameChat = async (newTitle) => {
+    if (!renameChatId) return;
+    const id = renameChatId;
+    await http.patch(`/api/chat/${id}`, { title: newTitle });
+    dispatch(updateChatTitle({ id, title: newTitle }));
+    setShowRename(false);
+    setRenameChatId(null);
+    setRenameInitialTitle('');
+  };
+
+  const deleteChat = async () => {
+    if (!deleteChatId) return;
+    const id = deleteChatId;
+    await http.delete(`/api/chat/${id}`);
+    const wasActive = activeChatId === id;
+    dispatch(removeChat(id));
+    setShowDelete(false);
+    setDeleteChatId(null);
+    setDeleteChatTitle('');
+    if (wasActive) {
+      // Messages for the new active chat will load via effect; clear immediately for UX
+      setMessages([]);
+    }
+  };
 
 
 return (
@@ -143,10 +201,12 @@ return (
       onSelectChat={(id) => {
         dispatch(selectChat(id));
         setSidebarOpen(false);
-        getMessages(id);
       }}
       onNewChat={handleNewChat}
       open={sidebarOpen}
+      onOpenAccount={() => setShowAccount(true)}
+      onRenameChat={handleRenameChat}
+      onDeleteChat={handleDeleteChat}
     />
     <main className="chat-main" role="main">
       {messages.length === 0 && (
@@ -173,6 +233,20 @@ return (
         onClick={() => setSidebarOpen(false)}
       />
     )}
+    <AccountPanel open={showAccount} onClose={() => setShowAccount(false)} />
+    <NewChatPanel open={showNewChat} onClose={() => setShowNewChat(false)} onCreate={createNewChat} />
+    <RenameChatPanel
+      open={showRename}
+      initialTitle={renameInitialTitle}
+      onClose={() => setShowRename(false)}
+      onRename={renameChat}
+    />
+    <DeleteChatConfirm
+      open={showDelete}
+      title={deleteChatTitle}
+      onClose={() => setShowDelete(false)}
+      onConfirm={deleteChat}
+    />
   </div>
 );
 };

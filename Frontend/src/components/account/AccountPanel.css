@@ -1,0 +1,34 @@
+/* Backdrop and panel */
+.account-backdrop { position:fixed; inset:0; background: rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:100; }
+.account-panel { width: 480px; max-width: 92vw; background:#0e0e0e; border:1px solid #1f1f1f; border-radius:14px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.5); color:#eee; }
+.account-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.account-header h3 { margin:0; font-size:1rem; }
+.icon-btn { background:#151515; color:#ddd; border:1px solid #2a2a2a; border-radius:8px; padding:6px 10px; cursor:pointer; }
+.muted { color:#9a9a9a; }
+
+.profile-block { border:1px solid #1f1f1f; border-radius:12px; padding:12px; background:#111; }
+.profile-row { display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed #222; }
+.profile-row:last-child { border-bottom:none; }
+.profile-row .label { color:#9a9a9a; }
+
+.password-form { margin-top:16px; display:flex; flex-direction:column; gap:8px; }
+.password-form h4 { margin:0 0 4px; font-size:0.95rem; }
+.password-form input { background:#0c0c0c; color:#eee; border:1px solid #1f1f1f; border-radius:10px; padding:10px 12px; }
+.error-text { color:#ff6b6b; font-size:0.85rem; }
+
+.danger-zone { margin-top:16px; display:flex; gap:8px; justify-content:space-between; }
+.danger-btn { background:#2a0d0d; color:#ff8585; border:1px solid #4a1b1b; border-radius:10px; padding:10px 12px; cursor:pointer; }
+.secondary-btn { background:#141414; color:#e0e0e0; border:1px solid #2a2a2a; border-radius:10px; padding:10px 12px; cursor:pointer; }
+.primary-btn { background:#111; color:#fafafa; border:1px solid #252525; border-radius:10px; padding:10px 12px; cursor:pointer; }
+
+.auth-actions { display:flex; gap:10px; }
+
+/* Confirm modal nested inside account overlay */
+.confirm-backdrop { position:fixed; inset:0; background: rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:110; }
+.confirm-card { width:420px; max-width:92vw; background:#0f0f0f; border:1px solid #222; border-radius:12px; padding:16px; color:#eee; box-shadow:0 10px 30px rgba(0,0,0,.6); }
+.confirm-card h4 { margin:0 0 6px; font-size:1rem; }
+.confirm-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+
+/* Notice view after deletion */
+.notice-body { display:flex; flex-direction:column; gap:8px; }
+.notice-actions { display:flex; justify-content:flex-end; }

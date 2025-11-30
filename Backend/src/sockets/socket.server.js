@@ -69,7 +69,7 @@ function initSocketServer(httpServer) {
 
                 queryMemory({
                     queryVector: vectors,
-                    limit: 3,
+                    limit: 10,
                     metadata: {
                         user: socket.user._id
                     }
@@ -87,19 +87,17 @@ function initSocketServer(httpServer) {
                 }
             })
 
-            const ltm = [
-                {
-                    role: "user",
-                    parts: [ {
-                        text: `
+            const memoryTexts = memory.map(item => `- ${item.metadata?.text || ''}`).filter(Boolean).join("\n");
 
-                        these are some previous messages from the chat, use them to generate a response
-
-                        ${memory.map(item => item.metadata.text).join("\n")}
-                        
-                        ` } ]
-                }
-            ]
+            const ltm = memoryTexts
+                ? [
+                    {
+                        role: "user",
+                        parts: [ {
+                            text: `Long-term user memory:\n${memoryTexts}\n\nInstructions: Treat the above as facts previously shared by this same user across any chats. When the question refers to entities like "my friend", use these memories to resolve them (e.g., if a memory says "ani is my friend", you can answer "Your friend's name is Ani"). Do not claim you have access to private data—these are just notes from the user's past messages.` } ]
+                    }
+                  ]
+                : []
 
 
             const response = await aiService.generateResponse([ ...ltm, ...stm ])

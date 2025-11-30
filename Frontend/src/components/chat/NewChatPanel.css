@@ -1,0 +1,14 @@
+/* Backdrop and panel layout */
+.nc-backdrop { position:fixed; inset:0; background: rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:100; }
+.nc-panel { width: 460px; max-width: 92vw; background:#0e0e0e; border:1px solid #1f1f1f; border-radius:14px; padding:16px; box-shadow: 0 10px 30px rgba(0,0,0,.5); color:#eee; }
+.nc-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.nc-header h3 { margin:0; font-size:1rem; }
+.icon-btn { background:#151515; color:#ddd; border:1px solid #2a2a2a; border-radius:8px; padding:6px 10px; cursor:pointer; }
+
+.nc-body { display:flex; flex-direction:column; gap:10px; }
+.nc-body input { background:#0c0c0c; color:#eee; border:1px solid #1f1f1f; border-radius:10px; padding:10px 12px; }
+.error-text { color:#ff6b6b; font-size:0.85rem; }
+.nc-actions { display:flex; justify-content:flex-end; gap:8px; margin-top:6px; }
+.primary-btn { background:#111; color:#fafafa; border:1px solid #252525; border-radius:10px; padding:10px 12px; cursor:pointer; }
+.secondary-btn { background:#141414; color:#e0e0e0; border:1px solid #2a2a2a; border-radius:10px; padding:10px 12px; cursor:pointer; }
+    .danger-btn { background:#2a0e0e; color:#ffdddd; border:1px solid #4a1a1a; border-radius:10px; padding:10px 12px; cursor:pointer; }

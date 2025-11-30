@@ -16,5 +16,11 @@ router.get('/', authMiddleware.authUser, chatController.getChats)
 /* GET /api/chat/messages/:id */
 router.get('/messages/:id', authMiddleware.authUser, chatController.getMessages)
 
+/* PATCH /api/chat/:id - rename chat */
+router.patch('/:id', authMiddleware.authUser, chatController.renameChat)
+
+/* DELETE /api/chat/:id - delete chat and its messages and vectors */
+router.delete('/:id', authMiddleware.authUser, chatController.deleteChat)
+
 
 module.exports = router;

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { http } from '../lib/http.js';
 
 const Register = () => {
     const [ form, setForm ] = useState({ email: '', firstname: '', lastname: '', password: '' });
     const [ submitting, setSubmitting ] = useState(false);
+    const [ error, setError ] = useState('');
     const navigate = useNavigate();
 
 
@@ -15,34 +16,27 @@ const Register = () => {
 
     async function handleSubmit(e) {
         e.preventDefault();
-        setSubmitting(true);
+    setSubmitting(true);
+    setError('');
         console.log(form);
 
-        axios.post("https://cohort-1-project-chat-gpt-lvp3.onrender.com/api/auth/register", {
+        http.post("/api/auth/register", {
             email: form.email,
             fullName: {
                 firstName: form.firstname,
                 lastName: form.lastname
             },
             password: form.password
-        }, {
-            withCredentials: true
         }).then((res) => {
             console.log(res);
             navigate("/");
         }).catch((err) => {
             console.error(err);
-            alert('Registration failed (placeholder)');
-        })
-
-        try {
-            // Placeholder: integrate real registration logic / API call.
-
-        } catch (err) {
-            console.error(err);
-        } finally {
+            const msg = err?.response?.data?.message || 'Registration failed';
+            setError(msg);
+        }).finally(() => {
             setSubmitting(false);
-        }
+        })
     }
 
     return (
@@ -71,6 +65,7 @@ const Register = () => {
                         <label htmlFor="password">Password</label>
                         <input id="password" name="password" type="password" autoComplete="new-password" placeholder="Create a password" value={form.password} onChange={handleChange} required minLength={6} />
                     </div>
+                    {error && <div style={{ color:'#ff6b6b', fontSize:'0.9rem', marginTop: 4 }}>{error}</div>}
                     <button type="submit" className="primary-btn" disabled={submitting}>
                         {submitting ? 'Creating...' : 'Create Account'}
                     </button>

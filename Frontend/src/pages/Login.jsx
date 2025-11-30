@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link,useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { http } from '../lib/http.js';
 
 
 const Login = () => {
     const [ form, setForm ] = useState({ email: '', password: '' });
     const [ submitting, setSubmitting ] = useState(false);
+    const [ error, setError ] = useState('');
     const navigate = useNavigate();
     
 
@@ -16,23 +17,22 @@ const Login = () => {
 
     async function handleSubmit(e) {
         e.preventDefault();
-        setSubmitting(true);
+    setSubmitting(true);
+    setError('');
 
 
         console.log(form);
 
-        axios.post("https://cohort-1-project-chat-gpt-lvp3.onrender.com/api/auth/login", {
+        http.post("/api/auth/login", {
             email: form.email,
             password: form.password
-        },
-            {
-                withCredentials: true // to set cookies
-            }
-        ).then((res) => {
+        }).then((res) => {
             console.log(res);
             navigate("/"); // home page
         }).catch((err) => {
             console.error(err);
+            const msg = err?.response?.data?.message || 'Wrong email or password';
+            setError(msg);
         }).finally(() => {
             setSubmitting(false);
         });
@@ -55,6 +55,7 @@ const Login = () => {
                         <label htmlFor="login-password">Password</label>
                         <input id="login-password" name="password" type="password" autoComplete="current-password" placeholder="Your password"  onChange={handleChange} required />
                     </div>
+                    {error && <div style={{ color:'#ff6b6b', fontSize:'0.9rem', marginTop: 4 }}>{error}</div>}
                     <button type="submit" className="primary-btn" disabled={submitting}>
                         {submitting ? 'Signing in...' : 'Sign in'}
                     </button>
