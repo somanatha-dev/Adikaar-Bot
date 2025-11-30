@@ -22,15 +22,23 @@ function initSocketServer(httpServer) {
 
     io.use(async (socket, next) => {    // middleware for socket authentication
 
+        // Try to get token from cookie first
         const cookies = cookie.parse(socket.handshake.headers?.cookie || "");
+        let token = cookies.token;
+        
+        // Fallback to auth object (for cross-origin scenarios)
+        if (!token && socket.handshake.auth?.token) {
+            token = socket.handshake.auth.token;
+        }
 
-        if (!cookies.token) {
+        if (!token) {
             next(new Error("Authentication error: No token provided"));
+            return;
         }
 
         try {
 
-            const decoded = jwt.verify(cookies.token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             const user = await userModel.findById(decoded.id);
 

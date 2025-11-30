@@ -30,6 +30,7 @@ const AccountPanel = ({ open, onClose }) => {
 
   const doLogout = async () => {
     try { await http.post('/api/auth/logout'); } catch {}
+    localStorage.removeItem('token'); // Clear token from localStorage
     setUser(null);
     // clear chat state so UI updates without reload
     dispatch(setChats([]));

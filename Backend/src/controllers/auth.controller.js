@@ -31,7 +31,8 @@ async function registerUser(req, res) {
 
     return res.status(201).json({
         message: "User registered successfully",
-        user: { email: user.email, _id: user._id, fullName: user.fullName }
+        user: { email: user.email, _id: user._id, fullName: user.fullName },
+        token // Send token in response for localStorage fallback
     });
 }
 
@@ -58,7 +59,8 @@ async function loginUser(req, res) {
 
     return res.status(200).json({
         message: "user logged in successfully",
-        user: { email: user.email, _id: user._id, fullName: user.fullName }
+        user: { email: user.email, _id: user._id, fullName: user.fullName },
+        token // Send token in response for localStorage fallback
     });
 }
 

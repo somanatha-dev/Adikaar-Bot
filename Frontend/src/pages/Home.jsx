@@ -97,6 +97,9 @@ const Home = () => {
 
     const tempSocket = io(SOCKET_URL, {
       withCredentials: true,
+      auth: {
+        token: localStorage.getItem('token')
+      }
     })
 
     tempSocket.on("ai-response", (messagePayload) => {
