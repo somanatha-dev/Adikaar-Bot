@@ -1,0 +1,19 @@
+{
+  "aadhaar": {
+    "summary": "Aadhaar is a 12-digit unique identity number issued by UIDAI to residents of India.",
+    "child": "Children under 5: only photograph captured; biometrics must be updated at ages 5 and 15.",
+    "cost": "Initial enrolment is free; updates may have a nominal fee at official centers.",
+    "download": "e-Aadhaar can often be downloaded within a few days from https://myaadhaar.uidai.gov.in using the Enrolment ID.",
+    "privacy": "Do not share Aadhaar number publicly. Use masked Aadhaar when possible."
+  },
+  "pan": {
+    "summary": "Permanent Account Number (PAN) is a 10-character alphanumeric ID issued by the Income Tax Department for tax purposes.",
+    "use": "PAN is required for high-value financial transactions and income tax filings.",
+    "apply": "Apply online via NSDL/e-Gov or UTIITSL portals linked from https://www.incometax.gov.in."
+  },
+  "pm kisan": {
+    "summary": "PM-Kisan provides income support to eligible farmer families.",
+    "benefit": "Qualified farmers receive periodic direct benefit transfers (DBT) to their bank accounts.",
+    "eligibility": "Excludes institutional landholders and certain higher-income categories; verification via land records."
+  }
+}

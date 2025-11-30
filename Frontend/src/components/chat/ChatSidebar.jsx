@@ -34,6 +34,13 @@ const ChatSidebar = ({ chats, activeChatId, onSelectChat, onNewChat, open, onOpe
       <div className="sidebar-header">
         <h2>Chats</h2>
         <button className="small-btn" onClick={onNewChat}>New</button>
+        {open && (
+          <button
+            className="sidebar-close-btn"
+            aria-label="Close sidebar"
+            onClick={() => window.dispatchEvent(new CustomEvent('closeSidebar'))}
+          >✕</button>
+        )}
       </div>
       <nav className="chat-list" aria-live="polite">
         {chats.map(c => (

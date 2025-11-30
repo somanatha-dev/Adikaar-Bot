@@ -102,11 +102,9 @@ function initSocketServer(httpServer) {
 
             const response = await aiService.generateResponse([ ...ltm, ...stm ])
 
-
-
-
             socket.emit('ai-response', {
-                content: response,
+                content: response.text,
+                meta: response.meta,
                 chat: messagePayload.chat
             })
 
@@ -114,10 +112,10 @@ function initSocketServer(httpServer) {
                 messageModel.create({
                     chat: messagePayload.chat,
                     user: socket.user._id,
-                    content: response,
+                    content: response.text,
                     role: "model"
                 }),
-                aiService.generateVector(response)
+                aiService.generateVector(response.text)
             ])
 
             await createMemory({
@@ -126,7 +124,8 @@ function initSocketServer(httpServer) {
                 metadata: {
                     chat: messagePayload.chat,
                     user: socket.user._id,
-                    text: response
+                    text: response.text,
+                    government: response.meta?.government || null
                 }
             })
 

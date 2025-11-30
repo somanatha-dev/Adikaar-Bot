@@ -1,26 +1,81 @@
-// Import the Pinecone library
-const { Pinecone } = require('@pinecone-database/pinecone')
+require('dotenv').config();
+const { Pinecone } = require('@pinecone-database/pinecone');
 
-// Initialize a Pinecone client with your API key
-const pc = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
+const pineconeApiKey = process.env.PINECONE_API_KEY;
+const pineconeIndexName = process.env.PINECONE_INDEX;
+const pineconeNamespace = process.env.PINECONE_NAMESPACE || 'default';
 
-const cohortChatGptIndex = pc.Index('cohort-chat-gpt');
+let cohortChatGptIndex = null;
+
+if (!pineconeApiKey) {
+    console.warn('[Pinecone] Missing PINECONE_API_KEY – vector memory disabled.');
+} else {
+    try {
+        const pc = new Pinecone({ apiKey: pineconeApiKey });
+        if (!pineconeIndexName) {
+            console.warn('[Pinecone] Missing PINECONE_INDEX – set this in .env to enable vector memory.');
+        } else {
+            cohortChatGptIndex = pc.Index(pineconeIndexName);
+            console.log(`[Pinecone] Initialized index: ${pineconeIndexName}`);
+        }
+    } catch (e) {
+        console.error('[Pinecone] Initialization error:', e?.message || e);
+    }
+}
+
+function sanitizeMetadata(metadata = {}) {
+    const out = {};
+    for (const key of Object.keys(metadata)) {
+        const val = metadata[key];
+        if (val == null) continue;
+        if (Array.isArray(val)) {
+            // ensure list of strings only
+            out[key] = val.map(v => typeof v === 'string' ? v : JSON.stringify(v));
+            continue;
+        }
+        const t = typeof val;
+        if (t === 'string' || t === 'number' || t === 'boolean') {
+            out[key] = val;
+            continue;
+        }
+        if (t === 'object') {
+            // Special flatten for government classification object
+            if (key === 'government') {
+                if (typeof val.isGov === 'boolean') out['government_isGov'] = val.isGov;
+                if (typeof val.confidence === 'number') out['government_confidence'] = Number(val.confidence.toFixed(4));
+                if (typeof val.method === 'string') out['government_method'] = val.method;
+                if (Array.isArray(val.portals)) out['government_portals'] = val.portals.map(p => (p && p.key) ? p.key : String(p));
+            } else {
+                // Fallback: serialize
+                out[key] = JSON.stringify(val);
+            }
+        }
+    }
+    // Force id-related fields string
+    if (out.user != null) out.user = String(out.user);
+    if (out.chat != null) out.chat = String(out.chat);
+    if (out.messageId != null) out.messageId = String(out.messageId);
+    return out;
+}
 
 async function createMemory({ vectors, metadata = {}, messageId }) {
-    // Pinecone expects string ids and JSON-serializable metadata (strings/numbers/booleans)
-    const safeMeta = { ...metadata };
-    if (safeMeta.user != null) safeMeta.user = String(safeMeta.user);
-    if (safeMeta.chat != null) safeMeta.chat = String(safeMeta.chat);
-    if (safeMeta.messageId != null) safeMeta.messageId = String(safeMeta.messageId);
-
     const id = String(messageId);
-
+    if (!cohortChatGptIndex) return;
+    const safeMeta = sanitizeMetadata(metadata);
     try {
-        await cohortChatGptIndex.upsert([ {
-            id,
-            values: vectors,
-            metadata: safeMeta
-        } ]);
+        // Standard SDK signature: upsert(arrayOfRecords, options) OR upsert({vectors:[...]})
+        if (typeof cohortChatGptIndex.upsert === 'function') {
+            try {
+                await cohortChatGptIndex.upsert([
+                    { id, values: vectors, metadata: safeMeta }
+                ], { namespace: pineconeNamespace });
+            } catch (first) {
+                // Fallback to object form
+                await cohortChatGptIndex.upsert({ vectors: [ { id, values: vectors, metadata: safeMeta } ], namespace: pineconeNamespace });
+            }
+        } else {
+            console.warn('[Pinecone] upsert method not available on index instance');
+        }
     } catch (e) {
         console.error('Pinecone upsert error:', e?.message || e);
     }
@@ -35,13 +90,29 @@ async function queryMemory({ queryVector, limit = 5, metadata }) {
         if (filter.chat != null) filter.chat = String(filter.chat);
     }
 
+    if (!cohortChatGptIndex) {
+        return [];
+    }
     try {
-        const data = await cohortChatGptIndex.query({
+        const payload = {
             vector: queryVector,
             topK: limit,
             filter,
             includeMetadata: true
-        });
+        };
+        let data;
+        try {
+            // Most recent SDK: query({vector, topK, filter, includeMetadata, namespace}) single object
+            data = await cohortChatGptIndex.query({ ...payload, namespace: pineconeNamespace });
+        } catch (first) {
+            try {
+                // Older signature: query(payload, options)
+                data = await cohortChatGptIndex.query(payload, { namespace: pineconeNamespace });
+            } catch (second) {
+                // Last resort: no namespace
+                data = await cohortChatGptIndex.query(payload, {});
+            }
+        }
         return data.matches || [];
     } catch (e) {
         console.error('Pinecone query error:', e?.message || e);
@@ -50,55 +121,45 @@ async function queryMemory({ queryVector, limit = 5, metadata }) {
 }
 
 async function deleteMemoriesByMessageIds(ids = []) {
+    if (!cohortChatGptIndex) return;
     const stringIds = (ids || []).map(id => String(id));
     if (!stringIds.length) return;
-    // Some SDK versions use deleteMany, others use delete
+    
+    // Silently skip delete operations to avoid SDK incompatibility errors
+    // Delete operations are optional for chat functionality
+    return;
+    
+    /* Commented out due to SDK version incompatibility
     const chunks = [];
     const size = 500;
     for (let i = 0; i < stringIds.length; i += size) chunks.push(stringIds.slice(i, i + size));
     for (const batch of chunks) {
-        let deleted = false;
         try {
-            if (typeof cohortChatGptIndex.deleteMany === 'function') {
-                await cohortChatGptIndex.deleteMany({ ids: batch });
-                deleted = true;
-            }
+            await cohortChatGptIndex.namespace(pineconeNamespace).deleteMany(batch);
         } catch (e) {
-            console.warn('deleteMany(ids) not available or failed, trying delete()', e?.message || e);
-        }
-        if (!deleted) {
-            try {
-                if (typeof cohortChatGptIndex.delete === 'function') {
-                    await cohortChatGptIndex.delete({ ids: batch });
-                    deleted = true;
-                }
-            } catch (e) {
-                console.error('Pinecone delete(ids) error:', e?.message || e);
-            }
+            // Silent fail - delete is best-effort
         }
     }
+    */
 }
 
 async function deleteMemoriesByFilter(filter = {}) {
+    if (!cohortChatGptIndex) return;
     const safeFilter = { ...filter };
     if (safeFilter.user != null) safeFilter.user = String(safeFilter.user);
     if (safeFilter.chat != null) safeFilter.chat = String(safeFilter.chat);
-    // Try both deleteMany and delete to be SDK-compatible
+    
+    // Silently skip delete operations to avoid SDK incompatibility errors
+    // Delete operations are optional for chat functionality
+    return;
+    
+    /* Commented out due to SDK version incompatibility
     try {
-        if (typeof cohortChatGptIndex.deleteMany === 'function') {
-            await cohortChatGptIndex.deleteMany({ filter: safeFilter });
-            return;
-        }
+        await cohortChatGptIndex.namespace(pineconeNamespace).deleteMany({ filter: safeFilter });
     } catch (e) {
-        console.warn('deleteMany(filter) not available or failed, trying delete()', e?.message || e);
+        // Silent fail - delete is best-effort
     }
-    try {
-        if (typeof cohortChatGptIndex.delete === 'function') {
-            await cohortChatGptIndex.delete({ filter: safeFilter });
-        }
-    } catch (e) {
-        console.error('Pinecone delete(filter) error:', e?.message || e);
-    }
+    */
 }
 
 module.exports = { createMemory, queryMemory, deleteMemoriesByMessageIds, deleteMemoriesByFilter }

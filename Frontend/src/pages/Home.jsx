@@ -43,7 +43,15 @@ const Home = () => {
   const [ deleteChatId, setDeleteChatId ] = useState(null);
   const [ deleteChatTitle, setDeleteChatTitle ] = useState('');
 
-  const activeChat = chats.find(c => c.id === activeChatId) || null;
+  // Listen for sidebar close event from close button
+  React.useEffect(() => {
+    const handler = () => setSidebarOpen(false);
+    window.addEventListener('closeSidebar', handler);
+    return () => window.removeEventListener('closeSidebar', handler);
+  }, []);
+
+  // Use _id (backend field) instead of id to resolve active chat
+  const activeChat = chats.find(c => c._id === activeChatId) || null;
 
   const [ messages, setMessages ] = useState([
     // {
@@ -194,6 +202,8 @@ return (
     <ChatMobileBar
       onToggleSidebar={() => setSidebarOpen(o => !o)}
       onNewChat={handleNewChat}
+      sidebarOpen={sidebarOpen}
+      activeChatTitle={activeChat?.title}
     />
     <ChatSidebar
       chats={chats}
@@ -208,12 +218,14 @@ return (
       onRenameChat={handleRenameChat}
       onDeleteChat={handleDeleteChat}
     />
+
+    
     <main className="chat-main" role="main">
       {messages.length === 0 && (
         <div className="chat-welcome" aria-hidden="true">
           <div className="chip">Early Preview</div>
-          <h1>ChatGPT Clone</h1>
-          <p>Ask anything. Paste text, brainstorm ideas, or get quick explanations. Your chats stay in the sidebar so you can pick up where you left off.</p>
+          <h1>Aadhikaar</h1>
+          <p>Ask about Indian government schemes, IDs, and policies. Your chats stay in the sidebar so you can pick up where you left off.</p>
         </div>
       )}
       <ChatMessages messages={messages} isSending={isSending} />

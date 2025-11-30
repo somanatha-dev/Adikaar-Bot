@@ -10,6 +10,68 @@ function formatTime(ts) {
   } catch { return ''; }
 }
 
+function parseContentWithLinks(content) {
+  if (!content) return null;
+  
+  // Split content into lines and process each line
+  const lines = content.split('\n');
+  const processedLines = lines.map((line, lineIdx) => {
+    // Check if line is a heading (emoji + CAPS text pattern)
+    const isMainHeading = /^[📋✅📄📝🌐⏱️📌]\s+[A-Z\s&]+$/.test(line.trim());
+    const isSubHeading = line.trim().startsWith('For ') || 
+                         /^[A-Z][a-z]+(\s[A-Z][a-z]+)*:$/.test(line.trim());
+    
+    // Process URLs in the line
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = [];
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = urlRegex.exec(line)) !== null) {
+      if (match.index > lastIndex) {
+        parts.push({ type: 'text', content: line.slice(lastIndex, match.index) });
+      }
+      parts.push({ type: 'link', content: match[0] });
+      lastIndex = match.index + match[0].length;
+    }
+    
+    if (lastIndex < line.length) {
+      parts.push({ type: 'text', content: line.slice(lastIndex) });
+    }
+    
+    if (parts.length === 0) {
+      parts.push({ type: 'text', content: line });
+    }
+    
+    // Wrap line based on type
+    const lineContent = parts.map((part, idx) => 
+      part.type === 'link' ? (
+        <a 
+          key={idx} 
+          href={part.content} 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="msg-link"
+        >
+          {part.content}
+        </a>
+      ) : (
+        <span key={idx}>{part.content}</span>
+      )
+    );
+    
+    if (isMainHeading) {
+      return <div key={lineIdx} className="msg-heading-main">{lineContent}</div>;
+    } else if (isSubHeading) {
+      return <div key={lineIdx} className="msg-heading-sub">{lineContent}</div>;
+    } else {
+      return <div key={lineIdx}>{lineContent}</div>;
+    }
+  });
+  
+  return <>{processedLines}</>;
+}
+
 const ChatMessages = ({ messages, isSending }) => {
   const bottomRef = useRef(null);
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages.length, isSending]);
@@ -18,7 +80,9 @@ const ChatMessages = ({ messages, isSending }) => {
       {messages.map((m,index) => (
         <div key={index} className={`msg msg-${m.type}`}>
           <div className="msg-role" aria-hidden="true">{m.type === 'user' ? 'You' : 'AI'}</div>
-          <div className="msg-bubble">{m.content}</div>
+          <div className="msg-bubble">
+            {parseContentWithLinks(m.content)}
+          </div>
           <div className="msg-meta" aria-hidden="true">{formatTime(m.createdAt)}</div>
           <div className="msg-actions" role="group" aria-label="Message actions">
             <button type="button" aria-label="Copy message" onClick={() => navigator.clipboard.writeText(m.content)}>

@@ -133,6 +133,7 @@
     gap: 18px;
     pointer-events: none;
     text-align: center;
+    padding: 0 var(--space-4);
 }
 
 .chat-welcome h1 {
@@ -146,12 +147,31 @@
     color: transparent;
 }
 
+@media (max-width: 640px) {
+    .chat-welcome h1 {
+        font-size: 2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .chat-welcome h1 {
+        font-size: 1.75rem;
+    }
+}
+
 .chat-welcome p {
     margin: 0;
     font-size: 0.95rem;
     color: #6a6a6a;
     max-width: 420px;
     line-height: 1.4;
+}
+
+@media (max-width: 640px) {
+    .chat-welcome p {
+        font-size: 0.875rem;
+        max-width: 90%;
+    }
 }
 
 .chat-welcome .chip {
