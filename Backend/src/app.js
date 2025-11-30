@@ -18,10 +18,10 @@ const app = express();
 app.use(cors({
     origin: [
         'http://localhost:5173',
-        'https://adikaar-bot-frontend.onrender.com'
+        'https://adikaar-bot-front.onrender.com'
     ],
     credentials: true
-}));
+}))
 app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, '../public')));
