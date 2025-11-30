@@ -1,0 +1,104 @@
+flowchart TB
+  %% Frontend Cluster
+  subgraph Frontend["🎨 FRONTEND - React SPA"]
+    direction TB
+    A[👤 User Interface]
+    R[⚛️ React Router]
+    S[🗄️ Redux Store]
+    H[📡 Axios HTTP Client]
+    C[🔌 Socket.IO Client]
+    PWA[📱 PWA Manifest + SW]
+    
+    A --> R
+    R --> S
+    R --> H
+    R --> C
+    R --> PWA
+    PWA -.cache-first.-> H
+  end
+
+  %% Backend Cluster
+  subgraph Backend["⚙️ BACKEND - Node.js/Express"]
+    direction TB
+    
+    AP[🚀 Express App<br/>server.js]
+    MW[🔐 Auth Middleware<br/>JWT Cookie Validation]
+    DB[(💾 MongoDB<br/>Users/Chats/Messages)]
+    
+    subgraph ROUTES["📋 API ROUTES"]
+      direction TB
+      RT_AUTH[🔑 /api/auth<br/>Register/Login/Logout]
+      RT_CHAT[💬 /api/chat<br/>CRUD Operations]
+      RT_GOV[🏛️ /api/gov<br/>Config/Classify]
+    end
+    
+    subgraph CTRL["🎯 CONTROLLERS"]
+      direction TB
+      CT_AUTH[Auth Logic<br/>Hash/JWT/Cookies]
+      CT_CHAT[Chat Logic<br/>CRUD + Vector Cleanup]
+    end
+    
+    subgraph SVC["🔧 SERVICES"]
+      direction TB
+      AI[🤖 AI Service<br/>Gov Classification<br/>Response Generation]
+      VEC[📊 Vector Service<br/>Pinecone Upsert/Query]
+      CFG[📄 Gov Config<br/>Portals/KB]
+    end
+    
+    IO[🔌 Socket.IO Server<br/>Real-time Chat Handler]
+    
+    AP --> ROUTES
+    MW -.protect.-> RT_AUTH
+    MW -.protect.-> RT_CHAT
+    
+    RT_AUTH --> CT_AUTH
+    RT_CHAT --> CT_CHAT
+    RT_GOV --> AI
+    RT_GOV --> CFG
+    
+    CT_AUTH <-->|authenticate| DB
+    CT_CHAT <-->|persist| DB
+    CT_CHAT -->|cleanup| VEC
+    
+    IO -->|store message| DB
+    IO -->|embed & store| VEC
+    IO -->|query memory| VEC
+    IO -->|generate response| AI
+    AI --> CFG
+  end
+
+  %% External Services Cluster
+  subgraph External["🌐 EXTERNAL SERVICES"]
+    direction TB
+    GENAI[🧠 Google GenAI<br/>gemini-2.0-flash<br/>gemini-embedding-001]
+    PINECONE[🗂️ Pinecone Vector DB<br/>768-dim Embeddings<br/>Namespace: default]
+  end
+
+  %% Cross-cluster connections
+  H -->|POST/GET/DELETE<br/>/api/auth/*| RT_AUTH
+  H -->|POST/GET/PATCH/DELETE<br/>/api/chat/*| RT_CHAT
+  H -->|GET<br/>/api/gov/*| RT_GOV
+  
+  RT_AUTH -.JSON Response.-> H
+  RT_CHAT -.JSON Response.-> H
+  RT_GOV -.JSON Response.-> H
+  
+  C <-->|ai-message event<br/>ai-response event<br/>JWT Cookie Auth| IO
+  
+  AI -->|classify & generate<br/>text prompts| GENAI
+  GENAI -.response text.-> AI
+  
+  AI -->|embed text<br/>768-dim| GENAI
+  GENAI -.embedding vectors.-> AI
+  
+  VEC -->|upsert vectors<br/>query by similarity| PINECONE
+  PINECONE -.matched results.-> VEC
+
+  %% Styling
+  classDef frontendStyle fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+  classDef backendStyle fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+  classDef externalStyle fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+  
+  class Frontend frontendStyle
+  class Backend backendStyle
+  class External externalStyle
